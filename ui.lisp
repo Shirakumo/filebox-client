@@ -180,9 +180,16 @@
     (#_showMessage (slot-value widget 'tray) title message (#_QSystemTrayIcon::NoIcon) 5000)))
 
 (defun main ()
+  (format T "Starting up...~%")
   (load-config)
+  (format T "Launching Qt GUI...~%")
   (make-qapplication)
+  (format T "QApplication launched...~%")
   (#_setQuitOnLastWindowClosed *qapplication* NIL)
   (let ((*main* NIL))
     (make-instance 'main)
     (#_exec *qapplication*)))
+
+(defun cmd-start (&rest args)
+  (declare (ignore args))
+  (main))
