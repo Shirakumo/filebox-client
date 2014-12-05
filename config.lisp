@@ -31,7 +31,7 @@
   `(or (conf ,@branches) (setf (conf ,@branches) ,default)))
 
 (defun set-defaults ()
-  (conf-default (:urls :base) "http://filebox.linuz.com:8080/api")
+  (conf-default (:urls :base) "http://filebox.tymoon.eu/api")
   (conf-default (:urls :login) (format NIL "~a/simple-auth/login" (conf :urls :base)))
   (conf-default (:urls :logout) (format NIL "~a/simple-auth/logout" (conf :urls :base)))
   (conf-default (:urls :upload) (format NIL "~a/filebox/upload" (conf :urls :base)))
