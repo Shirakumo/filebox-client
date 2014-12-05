@@ -7,33 +7,7 @@
 (in-package #:org.shirakumo.filebox.client)
 (named-readtables:in-readtable :qtools)
 
-(defvar *tray* NIL)
-
-(defun tray-notify (title message)
-  (format T "Tray says: ~a~%~a~%" title message)
-  (#_showMessage
-   *tray* title message
-   (#_QSystemTrayIcon::NoIcon)
-   2000))
-
-(defun clipboard ()
-  (#_text (#_QApplication::clipboard)))
-
-(defun (setf clipboard) (text)
-  (#_setText (#_QApplication::clipboard) text))
-
-(defun file-uploaded (file url)
-  (uiop:delete-file-if-exists file)
-  ;; (setf (clipboard) url)
-  ;; (tray-notify "File uploaded."
-  ;;              (format NIL "File ~a~@[.~a~] has been uploaded to ~a"
-  ;;                      (pathname-name file) (pathname-type file) url))
-  )
-
-(defun file-upload-failed (error)
-  (tray-notify "Upload failed!"
-               (princ-to-string error))
-  (invoke-restart 'continue))
+(defvar *main* NIL)
 
 (with-widget-environment
   (define-widget file-chooser (QWidget)
@@ -123,7 +97,6 @@
         (#_QMessageBox::critical widget "Failed to login" (princ-to-string err)))
       (:no-error (err)
         (declare (ignore err))
-        (restart-watcher)
         (#_close widget))))
 
   (define-slot cancel (widget)
@@ -132,11 +105,18 @@
 
 (with-widget-environment
   (define-widget main (QMainWindow)
-    ())
+    ((known-files :initform ())))
+
+  (define-initializer widget 0
+    (setf *main* widget))
+
+  (define-signal show-tray (string string))
 
   (define-subwidget settings (#_new QAction "&Settings" widget))
   
   (define-subwidget quit (#_new QAction "&Quit" widget))
+
+  (define-subwidget watcher (#_new QFileSystemWatcher widget))
 
   (define-subwidget menu (#_new QMenu)
     (#_addAction menu settings)
@@ -146,29 +126,61 @@
   (define-subwidget tray (#_new QSystemTrayIcon widget)
     (#_setToolTip tray (format NIL "~:[Not logged in!~;Logged in as ~a~]" *login* (conf :username)))
     (#_setContextMenu tray menu)
-    (setf *tray* tray)
+    (#_setIcon tray (#_new QIcon (uiop:native-namestring
+                                  (asdf:system-relative-pathname :filebox-client "icon.png"))))
     (#_show tray))
 
-  (define-initializer main 100
+  (define-initializer widget 100
     (if (and (conf :username) (conf :password))
-        (or (ignore-errors
-             (or *login* (login))
-             (start-watcher))
-            (tray-notify "Login failed!" "Failed to automatically login, watcher not running."))
+        (progn
+          (or (ignore-errors
+               (or *login* (login)) T)
+              (signal! widget show-tray ("Login failed!" string)
+                       ("Failed to automatically login, watcher not running." string)))
+          (when (conf :directory)
+            (#_addPath watcher (uiop:native-namestring (conf :directory)))
+            (signal! widget show-tray ("Welcome to Filebox Client" string)
+                     ((format NIL "Now watching over ~a" (uiop:native-namestring (conf :directory))) string))))
         (#_trigger settings)))
 
   (define-slot settings (widget)
     (declare (connected settings (triggered)))
-    (#_exec (make-widget 'settings (widget))))
+    (#_exec (make-widget 'settings (widget)))
+    (#_removePaths watcher (#_files watcher))
+    (when (conf :directory)
+      (#_addPath watcher (uiop:native-namestring (conf :directory)))))
 
   (define-slot quit (widget)
     (declare (connected quit (triggered)))
     (#_hide tray)
-    (#_exit *qapplication*)))
+    (#_exit *qapplication*))
+
+  (define-slot dir-changed (widget (file string))
+    (declare (connected watcher (directory-changed string)))
+    (declare (ignore file))
+    (let ((files (uiop:directory-files (conf :directory))))
+      (dolist (file files)
+        (unless (find file known-files :test #'equal)
+          (handler-case
+              (let ((url (upload file)))
+                (uiop:delete-file-if-exists file)
+                (signal! widget show-tray ("File uploaded." string)
+                         ((format NIL "~a~@[.~a~] has been uploaded to ~s" (pathname-name file) (pathname-type file) url) string))
+                (#_setText (#_QApplication::clipboard) url))
+            (error (err)
+              (push file known-files)
+              (signal! widget show-tray ("Uploaded failed!" string)
+                       ((format NIL "~a~@[.~a~] has failed to upload: ~a" (pathname-name file) (pathname-type file) err) string))))))))
+
+  (define-slot show-tray (widget (title string) (message string))
+    (declare (connected widget (show-tray string string)))
+    (format T "Showing in tray: ~a~%" message)
+    (#_showMessage (slot-value widget 'tray) title message (#_QSystemTrayIcon::NoIcon) 5000)))
 
 (defun main ()
   (load-config)
   (make-qapplication)
   (#_setQuitOnLastWindowClosed *qapplication* NIL)
-  (make-instance 'main)
-  (#_exec *qapplication*))
+  (let ((*main* NIL))
+    (make-instance 'main)
+    (#_exec *qapplication*)))
