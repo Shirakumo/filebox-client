@@ -15,7 +15,6 @@
   :components ((:file "package")
                (:file "config")
                (:file "client")
-               (:file "watcher")
                (:file "ui"))
   :depends-on (:qtools
                :drakma
