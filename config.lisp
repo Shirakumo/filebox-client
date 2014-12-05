@@ -32,10 +32,10 @@
 
 (defun set-defaults ()
   (conf-default (:urls :base) "http://filebox.linuz.com:8080/api")
-  (conf-default (:urls :login) (format NIL "~a/simple-auth/login" (:urls :base)))
-  (conf-default (:urls :logout) (format NIL "~a/simple-auth/logout" (:urls :base)))
-  (conf-default (:urls :upload) (format NIL "~a/filebox/upload" (:urls :base)))
-  (conf-default (:urls :delete) (format NIL "~a/filebox/delete" (:urls :base)))
+  (conf-default (:urls :login) (format NIL "~a/simple-auth/login" (conf :urls :base)))
+  (conf-default (:urls :logout) (format NIL "~a/simple-auth/logout" (conf :urls :base)))
+  (conf-default (:urls :upload) (format NIL "~a/filebox/upload" (conf :urls :base)))
+  (conf-default (:urls :delete) (format NIL "~a/filebox/delete" (conf :urls :base)))
   (conf-default (:directory) #p"~/filebox/"))
 
 (defun load-config (&optional (file *config-file*))
