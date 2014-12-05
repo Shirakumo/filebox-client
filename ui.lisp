@@ -138,6 +138,7 @@
               (signal! widget show-tray ("Login failed!" string)
                        ("Failed to automatically login, watcher not running." string)))
           (when (conf :directory)
+            (ensure-directories-exist (conf :directory))
             (#_addPath watcher (uiop:native-namestring (conf :directory)))
             (signal! widget show-tray ("Welcome to Filebox Client" string)
                      ((format NIL "Now watching over ~a" (uiop:native-namestring (conf :directory))) string))))
@@ -148,6 +149,7 @@
     (#_exec (make-widget 'settings (widget)))
     (#_removePaths watcher (#_files watcher))
     (when (conf :directory)
+      (ensure-directories-exist (conf :directory))
       (#_addPath watcher (uiop:native-namestring (conf :directory)))))
 
   (define-slot quit (widget)
