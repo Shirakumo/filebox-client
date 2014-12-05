@@ -58,31 +58,3 @@
   (assert (not (null *login*)) () "You are not logged in!")
   (format T "Deleting ~a~%" id)
   (request (conf :urls :delete) `(("file" . ,id))))
-
-(defun watch-directory (dir func &optional (cooldown 5))
-  (with-simple-restart (abort "Abort watching.")
-    (loop with prev = ()
-          for files = (uiop:directory-files dir)
-          do (dolist (file files)
-               (unless (find file prev :test #'equal)
-                 (with-simple-restart (continue "Continue watching.")
-                   (when (funcall func file)
-                     (push file prev)))))           
-             (when cooldown
-               (sleep cooldown)))))
-
-(defun do-nothing (&rest args)
-  (declare (ignore args)))
-
-(defun watch-for-uploads (&key (dir (conf :directory)) (on-upload #'do-nothing) (on-error #'do-nothing) (condition (constantly T)))
-  (ensure-directories-exist dir :verbose T)
-  (block exit
-    (watch-directory
-     dir #'(lambda (file)
-             (unless (funcall condition)
-               (return-from exit))
-             (when *login*
-               (let ((url (handler-bind ((error on-error))
-                            (upload file))))
-                 (funcall on-upload file url))
-               T)))))
