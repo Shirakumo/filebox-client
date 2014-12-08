@@ -12,7 +12,8 @@
 (defun request (url &optional params)
   (format T "Request: ~a ~a~%" url params)
   (let* ((drakma:*text-content-types* (list* '("text"."json") '("application"."json") drakma:*text-content-types*))
-         (data (drakma:http-request url :cookie-jar *cookies* :method :post :parameters params)))
+         (data (drakma:http-request url :cookie-jar *cookies* :method :post :parameters params
+                                        :external-format-out :utf-8 :external-format-in :utf-8)))
     (format T "Response: ~a~%" data)
     (with-input-from-string (stream data)
       (let* ((request (cl-json:decode-json stream))
@@ -58,3 +59,4 @@
   (assert (not (null *login*)) () "You are not logged in!")
   (format T "Deleting ~a~%" id)
   (request (conf :urls :delete) `(("file" . ,id))))
+
