@@ -63,7 +63,7 @@
 
   (define-subwidget folder (make-instance 'file-chooser :file (conf :directory)))
 
-  (define-subwidget save (#_new QPushButton "&Save"))
+  (define-subwidget save (#_new QPushButton "&Login && Save"))
   
   (define-subwidget cancel (#_new QPushButton "&Cancel")
     (#_setDefault cancel T))

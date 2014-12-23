@@ -45,7 +45,8 @@
                                :name "radiance-session"
                                :value value)))
                   (push cookie (drakma:cookie-jar-cookies *cookies*))
-                  (return cookie))))
+                  (return cookie)))
+  (setf *login* T))
 
 (defun logout ()
   (format T "Logging out~%")

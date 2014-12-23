@@ -9,7 +9,7 @@
   :author "Nicolas Hafner <shinmera@tymoon.eu>"
   :maintainer "Nicolas Hafner <shinmera@tymoon.eu>"
   :license "Artistic"
-  :version "1.0.0"
+  :version "1.0.1"
   :description "Local client that automatically pushes files from a folder to the filebox."
   :homepage "https://github.com/Shirakumo/filebox"
   :components ((:file "package")
