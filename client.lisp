@@ -24,13 +24,28 @@
             data
             (error message))))))
 
-(defun login (&optional (username (conf :username)) (password (conf :password)))
-  (assert (and (not (null username)) (not (null password))) ()
-          "Username and password cannot be null!")
+(defun login (username password)
   (format T "Logging in for ~a/~a~%" username password)
   (request (conf :urls :login) `(("username" . ,username)
                                  ("password" . ,password)))
   (setf *login* T))
+
+(defun session ()
+  (loop for cookie in (drakma:cookie-jar-cookies *cookies*)
+        when (string= (drakma:cookie-name cookie) "radiance-session")
+        do (return (drakma:cookie-value cookie))))
+
+(defun (setf session) (value)
+  (loop for cookie in (drakma:cookie-jar-cookies *cookies*)
+        when (string= (drakma:cookie-name cookie) "radiance-session")
+        do (return (setf (drakma:cookie-value cookie) value))
+        finally (let ((cookie (make-instance
+                               'drakma:cookie
+                               :domain ".tymoon.eu"
+                               :name "radiance-session"
+                               :value value)))
+                  (push cookie (drakma:cookie-jar-cookies *cookies*))
+                  (return cookie))))
 
 (defun logout ()
   (format T "Logging out~%")

@@ -55,17 +55,18 @@
     ())
 
   (define-subwidget username (#_new QLineEdit widget)
-    (#_setText username (or (conf :username) "")))
+    (#_setText username ""))
 
   (define-subwidget password (#_new QLineEdit widget)
     (#_setEchoMode password (#_QLineEdit::Password))
-    (#_setText password (or (conf :password) "")))
+    (#_setText password ""))
 
   (define-subwidget folder (make-instance 'file-chooser :file (conf :directory)))
 
   (define-subwidget save (#_new QPushButton "&Save"))
   
-  (define-subwidget cancel (#_new QPushButton "&Cancel"))
+  (define-subwidget cancel (#_new QPushButton "&Cancel")
+    (#_setDefault cancel T))
 
   (define-layout layout (#_new QGridLayout widget)
     (#_addWidget layout (#_new QLabel "Username:") 0 0 1 1)
@@ -86,18 +87,19 @@
 
   (define-slot save (widget)
     (declare (connected save (clicked)))
-    (setf (conf :username) (#_text username))
-    (setf (conf :password) (#_text password))
     (setf (conf :directory) (file folder))
     (save-config)
-    (ignore-errors (logout))
-    (handler-case
-        (login)
-      (error (err)
-        (#_QMessageBox::critical widget "Failed to login" (princ-to-string err)))
-      (:no-error (err)
-        (declare (ignore err))
-        (#_close widget))))
+    (unless (or (string= (#_text username) "")
+                (string= (#_text password) ""))
+      (handler-case
+          (progn
+            (ignore-errors (logout))
+            (login (#_text username) (#_text password))
+            (setf (conf :session) (session))
+            (save-config)
+            (#_close widget))
+        (error (err)
+          (#_QMessageBox::critical widget "Failed to login" (princ-to-string err))))))
 
   (define-slot cancel (widget)
     (declare (connected cancel (clicked)))
@@ -131,12 +133,9 @@
     (#_show tray))
 
   (define-initializer widget 100
-    (if (and (conf :username) (conf :password))
+    (if (conf :session)
         (progn
-          (or (ignore-errors
-               (or *login* (login)) T)
-              (signal! widget show-tray ("Login failed!" string)
-                       ("Failed to automatically login, watcher not running." string)))
+          (setf (session) (conf :session))
           (when (conf :directory)
             (ensure-directories-exist (conf :directory))
             (#_addPath watcher (uiop:native-namestring (conf :directory)))))
