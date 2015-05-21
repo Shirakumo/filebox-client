@@ -17,6 +17,12 @@
                (:file "client")
                (:file "ui"))
   :depends-on (:qtools
+               :qtcore
+               :qtgui
                :drakma
                :cl-json
-               :bordeaux-threads))
+               :bordeaux-threads
+               :dissect)
+  :build-operation asdf:program-op
+  :build-pathname "filebox-client"
+  :entry-point "org.shirakumo.filebox.client::cmd-start")

@@ -9,172 +9,169 @@
 
 (defvar *main* NIL)
 
-(with-widget-environment
-  (define-widget file-chooser (QWidget)
-    ((file :initarg :file :initform NIL :accessor file)))
+(define-widget file-chooser (QWidget)
+  ((file :initarg :file :initform NIL :accessor file)))
 
-  (define-signal file-changed (string))
-    
-  (define-subwidget path (#_new QLineEdit widget)
-    (#_setReadOnly path T)
-    (#_setText path "No file chosen."))
+(define-signal (file-chooser file-changed) (string))
 
-  (define-initializer widget 100
-    (when file
-      (setf (file widget) file)))
+(define-subwidget (file-chooser path) (q+:make-qlineedit file-chooser)
+  (setf (q+:read-only path) T)
+  (setf (q+:text path) "No file chosen."))
 
-  (define-subwidget button (#_new QPushButton "Browse.." widget))
+(define-initializer (file-chooser setup)
+  (when file
+    (setf (file file-chooser) file)))
 
-  (define-layout layout (#_new QHBoxLayout widget)
-    (#_setSizePolicy widget (#_QSizePolicy::Maximum) (#_QSizePolicy::Maximum))
-    (#_setMargin layout 0)
-    (#_setSpacing layout 0)
-    (#_addWidget layout path)
-    (#_addWidget layout button))
+(define-subwidget (file-chooser button) (q+:make-qpushbutton "Browse.." file-chooser))
 
-  (defmethod (setf file) :around (value (widget file-chooser))
-    (etypecase value
-      (string)
-      (pathname (setf value (uiop:native-namestring value))))
-    (#_setText (slot-value widget 'path) value)
-    (call-next-method)
-    (signal! widget file-changed (value string)))
+(define-subwidget (file-chooser layout) (q+:make-qhboxlayout file-chooser)
+  (setf (q+:size-policy file-chooser) (values (q+:qsizepolicy.maximum) (q+:qsizepolicy.maximum)))
+  (setf (q+:margin layout) 0)
+  (setf (q+:spacing layout) 0)
+  (q+:add-widget layout path)
+  (q+:add-widget layout button))
 
-  (defmethod file :around ((widget file-chooser))
-    (uiop:parse-native-namestring (call-next-method) :ensure-directory T))
+(defmethod (setf file) :around (value (file-chooser file-chooser))
+  (etypecase value
+    (string)
+    (pathname (setf value (uiop:native-namestring value))))
+  (setf (q+:text (slot-value file-chooser 'path)) value)
+  (call-next-method)
+  (signal! file-chooser (file-changed string) value))
 
-  (define-slot on-click (widget)
-    (declare (connected button (clicked)))
-    (let ((dir (#_QFileDialog::getExistingDirectory widget "Find Directory..." (#_QDir::currentPath))))
-      (unless (string= dir "")
-        (setf (file widget)
-              (uiop:parse-native-namestring dir :ensure-directory T))))))
+(defmethod file :around ((file-chooser file-chooser))
+  (uiop:parse-native-namestring (call-next-method) :ensure-directory T))
 
-(with-widget-environment
-  (define-widget settings (QDialog)
-    ())
+(define-slot (file-chooser on-click) ()
+  (declare (connected button (clicked)))
+  (let ((dir (q+:qfiledialog-get-existing-directory file-chooser "Find Directory..." (q+:qdir-current-path))))
+    (unless (string= dir "")
+      (setf (file file-chooser)
+            (uiop:parse-native-namestring dir :ensure-directory T)))))
 
-  (define-subwidget username (#_new QLineEdit widget)
-    (#_setText username ""))
+(define-widget settings (QDialog)
+  ())
 
-  (define-subwidget password (#_new QLineEdit widget)
-    (#_setEchoMode password (#_QLineEdit::Password))
-    (#_setText password ""))
+(define-subwidget (settings username) (q+:make-qlineedit settings)
+  (setf (q+:text username) ""))
 
-  (define-subwidget folder (make-instance 'file-chooser :file (conf :directory)))
+(define-subwidget (settings password) (q+:make-qlineedit settings)
+  (setf (q+:echo-mode password) (q+:qlineedit.password))
+  (setf (q+:text password) ""))
 
-  (define-subwidget save (#_new QPushButton "&Login && Save"))
-  
-  (define-subwidget cancel (#_new QPushButton "&Cancel")
-    (#_setDefault cancel T))
+(define-subwidget (settings folder) (make-instance 'file-chooser :file (conf :directory)))
 
-  (define-layout layout (#_new QGridLayout widget)
-    (#_addWidget layout (#_new QLabel "Username:") 0 0 1 1)
-    (#_addWidget layout username 0 1 1 1)
-    (#_addWidget layout (#_new QLabel "Password:") 1 0 1 1)
-    (#_addWidget layout password 1 1 1 1)
-    (#_addWidget layout (#_new QLabel "Folder:") 2 0 1 1)
-    (#_addWidget layout folder 2 1 1 1)
+(define-subwidget (settings save) (q+:make-qpushbutton "&Login && Save"))
 
-    (let ((sublayout (#_new QHBoxLayout)))
-      (#_addWidget sublayout save)
-      (#_addWidget sublayout cancel)
-      (#_addLayout layout sublayout 3 0 1 2)))
+(define-subwidget (settings cancel) (q+:make-qpushbutton "&Cancel")
+  (setf (q+:default cancel) T))
 
-  (define-initializer widget 100
-    (#_setWindowTitle widget "Filebox Client Settings")
-    (#_adjustSize widget))
+(define-subwidget (settings layout) (q+:make-qgridlayout settings)
+  (q+:add-widget layout (q+:make-qLabel "Username:") 0 0 1 1)
+  (q+:add-widget layout username 0 1 1 1)
+  (q+:add-widget layout (q+:make-qLabel "Password:") 1 0 1 1)
+  (q+:add-widget layout password 1 1 1 1)
+  (q+:add-widget layout (q+:make-qLabel "Folder:") 2 0 1 1)
+  (q+:add-widget layout folder 2 1 1 1)
 
-  (define-slot save (widget)
-    (declare (connected save (clicked)))
-    (setf (conf :directory) (file folder))
-    (save-config)
-    (unless (or (string= (#_text username) "")
-                (string= (#_text password) ""))
-      (handler-case
-          (progn
-            (ignore-errors (logout))
-            (login (#_text username) (#_text password))
-            (setf (conf :session) (session))
-            (save-config)
-            (#_close widget))
-        (error (err)
-          (#_QMessageBox::critical widget "Failed to login" (princ-to-string err))))))
+  (let ((sublayout (q+:make-qhboxlayout)))
+    (q+:add-widget sublayout save)
+    (q+:add-widget sublayout cancel)
+    (q+:add-layout layout sublayout 3 0 1 2)))
 
-  (define-slot cancel (widget)
-    (declare (connected cancel (clicked)))
-    (#_close widget)))
+(define-initializer (settings setup)
+  (setf (q+:window-title settings) "Filebox Client Settings")
+  (q+:adjust-size settings))
 
-(with-widget-environment
-  (define-widget main (QMainWindow)
-    ((known-files :initform ())))
-
-  (define-initializer widget 0
-    (setf *main* widget))
-
-  (define-signal show-tray (string string))
-
-  (define-subwidget settings (#_new QAction "&Settings" widget))
-  
-  (define-subwidget quit (#_new QAction "&Quit" widget))
-
-  (define-subwidget watcher (#_new QFileSystemWatcher widget))
-
-  (define-subwidget menu (#_new QMenu)
-    (#_addAction menu settings)
-    (#_addSeparator menu)
-    (#_addAction menu quit))
-
-  (define-subwidget tray (#_new QSystemTrayIcon widget)
-    (#_setToolTip tray (format NIL "~:[Not logged in!~;Logged in as ~a~]" *login* (conf :username)))
-    (#_setContextMenu tray menu)
-    (#_setIcon tray (#_new QIcon (uiop:native-namestring
-                                  (asdf:system-relative-pathname :filebox-client "icon.png"))))
-    (#_show tray))
-
-  (define-initializer widget 100
-    (if (conf :session)
+(define-slot (settings save) ()
+  (declare (connected save (clicked)))
+  (setf (conf :directory) (file folder))
+  (save-config)
+  (unless (or (string= (q+:text username) "")
+              (string= (q+:text password) ""))
+    (handler-case
         (progn
-          (setf (session) (conf :session))
-          (when (conf :directory)
-            (ensure-directories-exist (conf :directory))
-            (#_addPath watcher (uiop:native-namestring (conf :directory)))))
-        (#_trigger settings)))
+          (ignore-errors (logout))
+          (login (q+:text username) (q+:text password))
+          (setf (conf :session) (session))
+          (save-config)
+          (q+:close settings))
+      (error (err)
+        (q+:qmessagebox-critical settings "Failed to login" (princ-to-string err))))))
 
-  (define-slot settings (widget)
-    (declare (connected settings (triggered)))
-    (#_exec (make-widget 'settings (widget)))
-    (#_removePaths watcher (#_files watcher))
-    (when (conf :directory)
-      (ensure-directories-exist (conf :directory))
-      (#_addPath watcher (uiop:native-namestring (conf :directory)))))
+(define-slot (settings cancel) ()
+  (declare (connected cancel (clicked)))
+  (q+:close settings))
 
-  (define-slot quit (widget)
-    (declare (connected quit (triggered)))
-    (#_hide tray)
-    (#_exit *qapplication*))
+(define-widget main (QMainWindow)
+  ((known-files :initform ())))
 
-  (define-slot dir-changed (widget (file string))
-    (declare (connected watcher (directory-changed string)))
-    (declare (ignore file))
-    (let ((files (uiop:directory-files (conf :directory))))
-      (dolist (file files)
-        (unless (find file known-files :test #'equal)
-          (handler-case
-              (let ((url (upload file)))
-                (uiop:delete-file-if-exists file)
-                (signal! widget show-tray ("File uploaded." string)
-                         ((format NIL "~a~@[.~a~] has been uploaded to ~s" (pathname-name file) (pathname-type file) url) string))
-                (#_setText (#_QApplication::clipboard) url))
-            (error (err)
-              (push file known-files)
-              (signal! widget show-tray ("Uploaded failed!" string)
-                       ((format NIL "~a~@[.~a~] has failed to upload: ~a" (pathname-name file) (pathname-type file) err) string))))))))
+(define-initializer (main register-self 100)
+  (setf *main* main))
 
-  (define-slot show-tray (widget (title string) (message string))
-    (declare (connected widget (show-tray string string)))
-    (format T "Showing in tray: ~a~%" message)
-    (#_showMessage (slot-value widget 'tray) title message (#_QSystemTrayIcon::NoIcon) 5000)))
+(define-signal (main show-tray) (string string))
+
+(define-subwidget (main settings) (q+:make-qaction "&Settings" main))
+
+(define-subwidget (main quit) (q+:make-qaction "&Quit" main))
+
+(define-subwidget (main watcher) (q+:make-qfilesystemwatcher main))
+
+(define-subwidget (main menu) (q+:make-qmenu)
+  (q+:add-action menu settings)
+  (q+:add-separator menu)
+  (q+:add-action menu quit))
+
+(define-subwidget (main tray) (q+:make-qsystemtrayicon main)
+  (setf (q+:tool-tip tray) (format NIL "~:[Not logged in!~;Logged in as ~a~]" *login* (conf :username)))
+  (setf (q+:context-menu tray) menu)
+  (setf (q+:icon tray) (q+:make-qicon (uiop:native-namestring
+                                      (asdf:system-relative-pathname :filebox-client "icon.png"))))
+  (q+:show tray))
+
+(define-initializer (main setup)
+  (if (conf :session)
+      (progn
+        (setf (session) (conf :session))
+        (when (conf :directory)
+          (ensure-directories-exist (conf :directory))
+          (q+:add-path watcher (uiop:native-namestring (conf :directory)))))
+      (q+:trigger settings)))
+
+(define-slot (main settings) ()
+  (declare (connected settings (triggered)))
+  (q+:exec (make-instance 'settings))
+  (q+:remove-paths watcher (q+:files watcher))
+  (when (conf :directory)
+    (ensure-directories-exist (conf :directory))
+    (q+:add-path watcher (uiop:native-namestring (conf :directory)))))
+
+(define-slot (main quit) ()
+  (declare (connected quit (triggered)))
+  (q+:hide tray)
+  (q+:exit *qapplication*))
+
+(define-slot (main dir-changed) ((file string))
+  (declare (connected watcher (directory-changed string)))
+  (declare (ignore file))
+  (let ((files (uiop:directory-files (conf :directory))))
+    (dolist (file files)
+      (unless (find file known-files :test #'equal)
+        (handler-case
+            (let ((url (upload file)))
+              (uiop:delete-file-if-exists file)
+              (signal! main (show-tray string string) "File uploaded."
+                       (format NIL "~a~@[.~a~] has been uploaded to ~s" (pathname-name file) (pathname-type file) url))
+              (setf (q+:text (q+:qapplication-clipboard)) url))
+          (error (err)
+            (push file known-files)
+            (signal! main (show-tray string string) "Uploaded failed!"
+                     (format NIL "~a~@[.~a~] has failed to upload: ~a" (pathname-name file) (pathname-type file) err))))))))
+
+(define-slot (main show-tray) ((title string) (message string))
+  (declare (connected main (show-tray string string)))
+  (format T "Showing in tray: ~a~%" message)
+  (q+:show-message (slot-value main 'tray) title message (q+:qsystemtrayicon.no-icon) 5000))
 
 (defun main ()
   (format T "Starting up...~%")
@@ -182,15 +179,23 @@
   (format T "Launching Qt GUI...~%")
   (make-qapplication)
   (format T "QApplication launched...~%")
-  (#_setQuitOnLastWindowClosed *qapplication* NIL)
+  (q+:qapplication-set-quit-on-last-window-closed NIL)
   (let ((*main* NIL))
     (make-instance 'main)
-    (#_exec *qapplication*))
+    (q+:exec *qapplication*))
   (format T "Done. ~%"))
 
 (defun cmd-start (&rest args)
   (declare (ignore args))
-  (qt::load-libcommonqt)
-  (qt::reload)
-  (main)
-  (sb-ext:exit :timeout 1))
+  (sb-alien:alien-funcall
+   (sb-alien:extern-alien "disable_lossage_handler" (function sb-alien:void)))
+  (unwind-protect
+       (handler-case
+           (progn
+             (qt::load-libcommonqt)
+             (qt::reload)
+             (main))
+         (T (error)
+           (dissect:present error T)))
+    (finish-output)
+    (sb-ext:exit :timeout 1)))

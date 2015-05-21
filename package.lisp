@@ -6,7 +6,7 @@
 
 (in-package #:cl-user)
 (defpackage #:filebox-client
-  (:use #:cl #:qtools #:qt)
+  (:use #:cl+qt)
   (:nicknames #:org.shirakumo.filebox.client)
   (:shadow #:delete)
   ;; client.lisp
