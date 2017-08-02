@@ -187,15 +187,8 @@
 
 (defun cmd-start (&rest args)
   (declare (ignore args))
-  (sb-alien:alien-funcall
-   (sb-alien:extern-alien "disable_lossage_handler" (function sb-alien:void)))
-  (unwind-protect
-       (handler-case
-           (progn
-             (qt::load-libcommonqt)
-             (qt::reload)
-             (main))
-         (T (error)
-           (dissect:present error T)))
-    (finish-output)
-    (sb-ext:exit :timeout 1)))
+  #+sbcl (sb-ext:disable-debugger)
+  (handler-case
+      (main)
+    (T (error)
+      (dissect:present error T))))

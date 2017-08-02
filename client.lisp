@@ -6,14 +6,13 @@
 
 (in-package #:org.shirakumo.filebox.client)
 
-(defvar *cookies* (make-instance 'drakma:cookie-jar))
+(defvar *cookies* (cl-cookie:make-cookie-jar))
 (defvar *login* NIL)
 
 (defun request (url &optional params)
   (format T "Request: ~a ~a~%" url params)
-  (let* ((drakma:*text-content-types* (list* '("text"."json") '("application"."json") drakma:*text-content-types*))
-         (data (drakma:http-request url :cookie-jar *cookies* :method :post :parameters params
-                                        :external-format-out :utf-8 :external-format-in :utf-8)))
+  (let* ((data (babel:octets-to-string (dex:post url :cookie-jar *cookies* :content params :force-binary T)
+                                       :encoding :utf-8)))
     (format T "Response: ~a~%" data)
     (with-input-from-string (stream data)
       (let* ((request (cl-json:decode-json stream))
@@ -31,20 +30,19 @@
   (setf *login* T))
 
 (defun session ()
-  (loop for cookie in (drakma:cookie-jar-cookies *cookies*)
-        when (string= (drakma:cookie-name cookie) "radiance-session")
-        do (return (drakma:cookie-value cookie))))
+  (loop for cookie in (cl-cookie:cookie-jar-cookies *cookies*)
+        when (string= (cl-cookie:cookie-name cookie) "radiance-session")
+        do (return (cl-cookie:cookie-value cookie))))
 
 (defun (setf session) (value)
-  (loop for cookie in (drakma:cookie-jar-cookies *cookies*)
-        when (string= (drakma:cookie-name cookie) "radiance-session")
-        do (return (setf (drakma:cookie-value cookie) value))
-        finally (let ((cookie (make-instance
-                               'drakma:cookie
+  (loop for cookie in (cl-cookie:cookie-jar-cookies *cookies*)
+        when (string= (cl-cookie:cookie-name cookie) "radiance-session")
+        do (return (setf (cl-cookie:cookie-value cookie) value))
+        finally (let ((cookie (cl-cookie:make-cookie
                                :domain ".tymoon.eu"
                                :name "radiance-session"
                                :value value)))
-                  (push cookie (drakma:cookie-jar-cookies *cookies*))
+                  (push cookie (cl-cookie:cookie-jar-cookies *cookies*))
                   (return cookie)))
   (setf *login* T))
 
