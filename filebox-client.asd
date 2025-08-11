@@ -4,7 +4,7 @@
   :license "zlib"
   :version "1.0.1"
   :description "Local client that automatically pushes files from a folder to the filebox."
-  :homepage "https://github.com/Shirakumo/filebox"
+  :homepage "https://shirakumo.org/project/filebox"
   :components ((:file "package")
                (:file "config")
                (:file "client")
