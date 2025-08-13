@@ -1,5 +1,4 @@
-About Filebox-Client
---------------------
-This is a small Qt application that watches over a directory and uploads new files from it automatically to your [Filebox](https://shirakumo.org/project/filebox) account. When a new file is detected, it uploads it, deletes it from the folder and puts the link to the uploaded file into your clipboard.
+# This repository has [moved](https://shirakumo.org/projects/filebox-client)!
+Due to Microsoft's continued enshittification of the platform this repository has been moved to [Codeberg](https://shirakumo.org/projects/filebox-client) in August of 2025. It will not receive further updates or patches. **Issues and pull requests will not be looked at here either**, please submit your patches and issue tickets on Codeberg, or send them directly via good old email patches to [shirakumo@tymoon.eu](mailto:shirakumo@tymoon.eu).
 
-To run it, simply use `filebox-client:main`.
+Thanks.
